@@ -90,7 +90,6 @@ sqrt((E1-E2)^2 + (N1-N2)^2)
 
 ```
 
-
 ```{r}
 wildschwein_BE <- wildschwein_BE %>%
   group_by(TierID) %>%
@@ -106,4 +105,67 @@ wildschwein_BE <- wildschwein_BE %>%
 
 hist(wildschwein_BE$speed_ms, 200)
 ```
+
+# Task 4 - Cross-scale movement analysis
+
+```{r}
+# read the caro data
+caro <- read_delim("caro60.csv", ",")
+```
+
+```{r}
+length_caro <- nrow(caro)
+seq_caro3 <- seq(from = 1, to = length_caro, by = 3)
+seq_caro6 <- seq(from = 1, to = length_caro, by = 6)
+seq_caro9 <- seq(from = 1, to = length_caro, by = 9)
+
+caro_3 <- dplyr::slice(caro, seq_caro3)
+caro_6 <- dplyr::slice(caro, seq_caro6)
+caro_9 <- dplyr::slice(caro, seq_caro9)
+
+```
+
+```{r}
+caro <- caro %>%
+  mutate(timelag_s = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC),
+                           units = "secs"),
+         steplength_m = sqrt((E-lead(E))^2 + (N-lead(N))^2),
+         speed_ms = steplength_m/timelag_s)
+
+caro_3 <- caro_3 %>%
+  mutate(timelag_s = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC),
+                           units = "secs"),
+         steplength_m = sqrt((E-lead(E))^2 + (N-lead(N))^2),
+         speed_ms = steplength_m/timelag_s)
+
+caro_6 <- caro_6 %>%
+  mutate(timelag_s = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC),
+                           units = "secs"),
+         steplength_m = sqrt((E-lead(E))^2 + (N-lead(N))^2),
+         speed_ms = steplength_m/timelag_s)
+
+caro_9 <- caro_9 %>%
+  mutate(timelag_s = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC),
+                           units = "secs"),
+         steplength_m = sqrt((E-lead(E))^2 + (N-lead(N))^2),
+         speed_ms = steplength_m/timelag_s)
+
+```
+
+```{r plot speeds as line}
+ggplot() + 
+  geom_line(data = caro, aes(DatetimeUTC, speed_ms)) +
+  geom_line(data = caro_3, aes(DatetimeUTC, speed_ms)) +
+  geom_line(data = caro_6, aes(DatetimeUTC, speed_ms)) + 
+  geom_line(data = caro_9, aes(DatetimeUTC, speed_ms))
+```
+
+```{r}
+caro_3 %>%
+  ggplot(aes(E, N))+ 
+  geom_point()+
+  geom_path()
+
+```
+
 
