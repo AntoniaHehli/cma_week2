@@ -7,11 +7,15 @@ output: html_document
 
 # Task 1 - Import your data
 
-```{r import the data}
+```{r import libraries}
+library(dplyr)
 library(ggplot2)
-library("readr") 
-library("sf") 
+library(readr) 
+library(sf)
+```
 
+
+```{r import the data}
 # read the data
 wildschwein_BE <- read_delim("wildschwein_BE_2056.csv", ",")
 
@@ -46,92 +50,105 @@ Now inspect your data in more detail. Try to answer the following questions:
 wildschwein_BE_count <- wildschwein_BE %>%
   group_by(TierID) %>%
   count()
+
+print(unique(wildschwein_BE$TierName))
 ```
 
-There are three individuals that were tracked. They have the IDs 002A, 0016A, and 018A.
+There are three individuals that were tracked. They have the IDs 002A, 0016A, and 018A and are called Sabi, Rosa, and Ruth.
 
 - For how long were the individual tracked? Are there gaps? Were all individuals tracked concurrently or sequentially?
 
-```{r}
+```{r plot observation time}
 ggplot(wildschwein_BE, aes(DatetimeUTC, TierName)) + 
   geom_point()
-
 ```
+
+Sabi was tracked from about September 2014 to August 2015; Ruth from about November/December 2014 until August 2015. And Rosa was tracked from also about November/December 2014 to July 2015. The individual were mostly tracked concurrently.
 
 - What is the temporal sampling interval between the locations?
 
 ```{r plot histogram}
 # timelag/60 = minutes
-
 ggplot(wildschwein_BE, aes(timelag/60)) + 
   geom_histogram(binwidth = 0.5) + 
   lims(x = c(0, 5000/60))+
-  scale_y_log10()
+  labs(x = "Time lag [min]",
+       y = "Count")
 ```
 
-```{r}
+```{r plot the line of the temporal sampling}
 wildschwein_BE %>%
   filter(DatetimeUTC < "2014-08-24") %>%
   ggplot(aes(DatetimeUTC, timelag, color = TierName)) + 
   geom_point() + 
-  geom_line()
-
+  geom_line() +
+  labs(x = "Date and Time [UTC]",
+       y = "Time lag")
 ```
 
 # Task 3 - Deriving movement parameters I: Speed
 
-```{r}
+```{r calculation of step length with test values}
+# save the first two sets of coordinates to find a good way to calculate the step length [m]
 N1 <- 1204752
 N2 <- 1204863
 E1 <- 2570409
 E2 <- 2570402
 
+# calculate the speed
 sqrt((E1-E2)^2 + (N1-N2)^2)
-
 ```
 
-```{r}
+```{r calculate step length}
+# use mutate() and lead() to calculate the step length [m]
 wildschwein_BE <- wildschwein_BE %>%
   group_by(TierID) %>%
   mutate(steplength_m = sqrt((E-lead(E))^2 + (N-lead(N))^2))
 ```
 
-```{r}
+```{r calculate speed}
 wildschwein_BE <- wildschwein_BE %>% 
   mutate(speed_ms = steplength_m/timelag)
 ```
 
-```{r}
-
-hist(wildschwein_BE$speed_ms, 200)
+```{r speed histogram}
+# plot the speed histogram using ggplot
+ggplot(wildschwein_BE, aes(speed_ms)) + 
+  geom_histogram(binwidth = 0.005)
 ```
 
 # Task 4 - Cross-scale movement analysis
 
-```{r}
+```{r read caro data}
 # read the caro data
 caro <- read_delim("caro60.csv", ",")
 ```
 
-```{r}
+```{r prepare and slice the caro data}
+# compute the total number of observations and save this value as a variable
 length_caro <- nrow(caro)
+
+# create the different sequences for the caro data
 seq_caro3 <- seq(from = 1, to = length_caro, by = 3)
 seq_caro6 <- seq(from = 1, to = length_caro, by = 6)
 seq_caro9 <- seq(from = 1, to = length_caro, by = 9)
 
+# create the caro subsamples using the created sequences
 caro_3 <- dplyr::slice(caro, seq_caro3)
 caro_6 <- dplyr::slice(caro, seq_caro6)
 caro_9 <- dplyr::slice(caro, seq_caro9)
 
 ```
 
-```{r}
+```{r calculate steplength and speed for each caro data set}
+# for the initial data set: calculate steplength and speed using the formulas from task 3
 caro <- caro %>%
   mutate(timelag_s = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC),
                            units = "secs"),
          steplength_m = sqrt((E-lead(E))^2 + (N-lead(N))^2),
          speed_ms = steplength_m/timelag_s)
 
+# repeat that three times with the three different sequences
 caro_3 <- caro_3 %>%
   mutate(timelag_s = as.integer(difftime(lead(DatetimeUTC),DatetimeUTC),
                            units = "secs"),
@@ -149,21 +166,22 @@ caro_9 <- caro_9 %>%
                            units = "secs"),
          steplength_m = sqrt((E-lead(E))^2 + (N-lead(N))^2),
          speed_ms = steplength_m/timelag_s)
-
 ```
 
 ```{r plot speeds as line}
+# still try to add a legend
 ggplot() + 
-  geom_line(data = caro, aes(DatetimeUTC, speed_ms)) +
-  geom_line(data = caro_3, aes(DatetimeUTC, speed_ms)) +
-  geom_line(data = caro_6, aes(DatetimeUTC, speed_ms)) + 
-  geom_line(data = caro_9, aes(DatetimeUTC, speed_ms))
+  geom_line(data = caro, aes(DatetimeUTC, speed_ms), color = "orange") +
+  geom_line(data = caro_3, aes(DatetimeUTC, speed_ms), color = "red") +
+  geom_line(data = caro_6, aes(DatetimeUTC, speed_ms), color = "blue") + 
+  geom_line(data = caro_9, aes(DatetimeUTC, speed_ms), color = "purple")
 ```
 
-```{r}
-caro_3 %>%
-  ggplot(aes(E, N))+ 
+```{r plot the different trajectories of the caro data}
+ggplot(caro_3, aes(E, N))+ 
   geom_point()+
+  geom_path() + 
+  geom_point(data = caro, aes(E, N)) + 
   geom_path()
 
 ```
