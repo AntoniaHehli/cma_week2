@@ -1,0 +1,10 @@
+---
+title: "GEO880: Exercises Week 2"
+author: "Antonia Hehli"
+date: "2023-04-28"
+output: html_document
+---
+
+
+
+
