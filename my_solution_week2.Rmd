@@ -84,7 +84,26 @@ wildschwein_BE %>%
 N1 <- 1204752
 N2 <- 1204863
 E1 <- 2570409
-E2 <- 2570402 
+E2 <- 2570402
+
+sqrt((E1-E2)^2 + (N1-N2)^2)
+
 ```
 
+
+```{r}
+wildschwein_BE <- wildschwein_BE %>%
+  group_by(TierID) %>%
+  mutate(steplength_m = sqrt((E-lead(E))^2 + (N-lead(N))^2))
+```
+
+```{r}
+wildschwein_BE <- wildschwein_BE %>% 
+  mutate(speed_ms = steplength_m/timelag)
+```
+
+```{r}
+
+hist(wildschwein_BE$speed_ms, 200)
+```
 
