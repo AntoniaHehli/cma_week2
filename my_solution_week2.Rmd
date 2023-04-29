@@ -12,6 +12,7 @@ library(dplyr)
 library(ggplot2)
 library(readr) 
 library(sf)
+library(zoo)
 ```
 
 
@@ -202,4 +203,42 @@ ggplot()+
   geom_path(data = caro_9, aes(E, N), color = "#00BFC4")+
   theme_minimal()
 ```
+
+# Task 5 - Deriving movement parameters II: Rolling window function
+
+For this task, I needed to install a new packages called "zoo". After installing, I added it to the libraries at the beginning of this document.
+
+```{r familiarize with the package}
+# create a random example with 10 values
+example <- rnorm(10)
+
+# example with k = 3 as width of the rolling window
+rollmean(example, k = 3, fill = NA, align = "left")
+
+# example with k = 4 as width of the rolling window
+rollmean(example, k = 4, fill = NA, align = "left")
+
+```
+
+```{r rollmean on caro}
+caro <- caro %>%
+  mutate(speed_rm3 = rollmean(speed_ms, k = 3, fill = NA, align = "left"),
+         speed_rm5 = rollmean(speed_ms, k = 5, fill = NA, align = "left"),
+         speed_rm7 = rollmean(speed_ms, k = 7, fill = NA, align = "left"))
+
+ggplot(data = caro) + 
+  geom_line(aes(DatetimeUTC, speed_ms, color = "#00BFC4")) +
+  geom_line(aes(DatetimeUTC, speed_rm3, color = "#7CAE00")) +
+  geom_line(aes(DatetimeUTC, speed_rm5, color = "#C77CFF")) + 
+  geom_line(aes(DatetimeUTC, speed_rm7, color = "#F8766D"))+
+  labs(x = "Time",
+       y = "Speed [m/s]")+
+  scale_color_manual(name = "Speed",labels = c("Regular speed", "Rolling window (k = 3)",
+                                               "Rolling window (k = 5)", "Rolling window (k = 7)"),
+                     values=c("#C77CFF", "#7CAE00", "#00BFC4", "#F8766D"))
+```
+
+# Task 6 - Add your movement data to your repository
+
+
 
