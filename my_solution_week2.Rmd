@@ -12,6 +12,7 @@ library(dplyr)
 library(ggplot2)
 library(readr) 
 library(sf)
+library(tmap)
 library(zoo)
 ```
 
@@ -30,10 +31,8 @@ wildschwein_BE <- st_as_sf(wildschwein_BE, coords = c("E", "N"),
 
 Calculate the time difference between subsequent rows as described in the demo. You can calculate the time difference using the function difftime() in combination with lead().
 
-- the function difftime() has an option units. Set this to secs to get the time difference in seconds
-use as.integer() to turn the output returned by difftime() into an integer.
-
-- store the output in a new column (e.g. timelag)
+- The function difftime() has an option units. Set this to secs to get the time difference in seconds
+use as.integer() to turn the output returned by difftime() into an integer. Store the output in a new column (e.g. timelag)
 
 ```{r calculate time difference}
 wildschwein_BE <- wildschwein_BE %>%
@@ -170,37 +169,55 @@ caro_9 <- caro_9 %>%
 ```
 
 ```{r plot speeds as line}
-# still try to add a legend
 ggplot() + 
-  geom_line(data = caro, aes(DatetimeUTC, speed_ms), color = "#F8766D") +
-  geom_line(data = caro_3, aes(DatetimeUTC, speed_ms), color = "#7CAE00") +
-  geom_line(data = caro_6, aes(DatetimeUTC, speed_ms), color = "#00BFC4") + 
-  geom_line(data = caro_9, aes(DatetimeUTC, speed_ms), color = "#C77CFF")+
+  geom_line(data = caro, aes(DatetimeUTC, speed_ms, color = "#00BFC4")) +
+  geom_line(data = caro_3, aes(DatetimeUTC, speed_ms, color = "#7CAE00")) +
+  geom_line(data = caro_6, aes(DatetimeUTC, speed_ms, color = "#C77CFF")) + 
+  geom_line(data = caro_9, aes(DatetimeUTC, speed_ms, color = "#F8766D"))+
   labs(x = "Time",
-       y = "Speed [m/s]")+
+       y = "Speed [m/s]",
+       title = "Comparing derived speed at different sampling intervals")+
+  scale_color_manual(name = "Sampling interval",labels = c("1 Minute", "3 Minutes",
+                                               "6 Minutes", "9 Minutes"),
+                     values=c("#C77CFF", "#7CAE00", "#00BFC4", "#F8766D"))+
   theme_minimal()
 ```
 
 ```{r plot the different trajectories of the caro data}
-ggplot()+ 
-  geom_point(data = caro, aes(E, N), color = "#F8766D", alpha = 0.5)+
-  geom_path(data = caro, aes(E, N),color = "#F8766D", alpha = 0.5) + 
-  geom_point(data = caro_3, aes(E, N), color = "#00BFC4") + 
-  geom_path(data = caro_3, aes(E, N), color = "#00BFC4") + 
+# combine the 1 and 3 minute trajectory into one data set
+caro_1_3 <- rbind(caro, caro_3)
+
+caro_1_3 %>% 
+  group_by(as.factor(timelag_s)) %>% 
+  ggplot(aes(x = E, y = N, color = as.factor(timelag_s)))+
+  geom_point()+
+  geom_path()+
+  scale_color_discrete(na.translate = FALSE, name = "Trajectory [min]", labels = c("1 Minute", "3 Minutes"))+
+  labs(title = "Comparing original- with 3 minutes-resampled data")+
   theme_minimal()
 
-ggplot()+ 
-  geom_point(data = caro, aes(E, N), color = "#F8766D", alpha = 0.5)+
-  geom_path(data = caro, aes(E, N),color = "#F8766D", alpha = 0.5) + 
-  geom_point(data = caro_6, aes(E, N), color = "#00BFC4") + 
-  geom_path(data = caro_6, aes(E, N), color = "#00BFC4")+
+# repeat for one and six minutes
+caro_1_6 <- rbind(caro, caro_6)
+
+caro_1_6 %>% 
+  group_by(as.factor(timelag_s)) %>% 
+  ggplot(aes(x = E, y = N, color = as.factor(timelag_s)))+
+  geom_point()+
+  geom_path()+
+  scale_color_discrete(na.translate = FALSE, name = "Trajectory [min]", labels = c("1 Minute", "6 Minutes"))+
+  labs(title = "Comparing original- with 6 minutes-resampled data")+
   theme_minimal()
 
-ggplot()+ 
-  geom_point(data = caro, aes(E, N), color = "#F8766D", alpha = 0.5)+
-  geom_path(data = caro, aes(E, N),color = "#F8766D", alpha = 0.5) + 
-  geom_point(data = caro_9, aes(E, N), color = "#00BFC4") + 
-  geom_path(data = caro_9, aes(E, N), color = "#00BFC4")+
+# repeat for one and nine minutes
+caro_1_9 <- rbind(caro, caro_9)
+
+caro_1_9 %>% 
+  group_by(as.factor(timelag_s)) %>% 
+  ggplot(aes(x = E, y = N, color = as.factor(timelag_s)))+
+  geom_point()+
+  geom_path()+
+  scale_color_discrete(na.translate = FALSE, name = "Trajectory [min]", labels = c("1 Minute", "9 Minutes"))+
+  labs(title = "Comparing original- with 9 minutes-resampled data")+
   theme_minimal()
 ```
 
@@ -221,11 +238,13 @@ rollmean(example, k = 4, fill = NA, align = "left")
 ```
 
 ```{r rollmean on caro}
+# calculate the rolling mean
 caro <- caro %>%
   mutate(speed_rm3 = rollmean(speed_ms, k = 3, fill = NA, align = "left"),
          speed_rm5 = rollmean(speed_ms, k = 5, fill = NA, align = "left"),
          speed_rm7 = rollmean(speed_ms, k = 7, fill = NA, align = "left"))
 
+# plot the speeds with different rolling means
 ggplot(data = caro) + 
   geom_line(aes(DatetimeUTC, speed_ms, color = "#00BFC4")) +
   geom_line(aes(DatetimeUTC, speed_rm3, color = "#7CAE00")) +
@@ -239,7 +258,64 @@ ggplot(data = caro) +
   theme_minimal()
 ```
 
-# Task 6 - Add your movement data to your repository
+# Task 7 - Explore your movement data
+
+## Import the data and convert it to a sf object
+
+```{r load the movement data}
+# read the data
+movement <- read_delim("private_files/posmo_tracks.csv", ",")
+
+# convert the movement data to a spatial object, the CRS is WGS84
+movement <- st_as_sf(movement, coords = c("lon_x", "lat_y"), 
+                           crs = 4326, 
+                           remove = FALSE)
+
+```
+
+## Convert the CRS to 1903+ LV95
+
+```{r transform CRS}
+movement <- movement %>% 
+  st_transform(crs = 2056)
+```
+
+## Map
+
+```{r plot all the dots colored by transportation mode}
+tmap_mode("view")
+tm_shape(movement, projection = 2056)+
+  tm_dots(col = "transport_mode")
+```
+
+## Speed
+
+```{r}
+# get the LV95 coordinates in two separate coordinates
+movement <- cbind(movement, st_coordinates(movement))
+
+# calculate the speed
+movement <- movement %>%
+  mutate(timelag_s = as.integer(difftime(lead(datetime), datetime),
+                           units = "secs"),
+         steplength_m = sqrt((X-lead(X))^2 + (Y-lead(Y))^2),
+         speed_ms = steplength_m/timelag_s)
+
+# plot a histogram of the speeds by transportation modes
+ggplot(movement, aes((speed_ms)*3.6, fill = transport_mode))+ # multiply m/s * 3.6 to get km/h
+  geom_histogram(binwidth = 1)+
+  lims(x = c(0, 300))+
+  labs(x = "Speed [km/h]",
+       y = "Count",
+       title = "Speed histogram by transportation mode")+
+  theme_minimal()+
+  scale_fill_discrete(name = "Transport mode", 
+                      na.translate = FALSE) # do not show NA values in histogram
+
+```
+
+
+
 
 
 
