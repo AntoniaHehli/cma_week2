@@ -280,7 +280,7 @@ movement <- movement %>%
   st_transform(crs = 2056)
 ```
 
-## Map
+## Create a map
 
 ```{r plot all the dots colored by transportation mode}
 tmap_mode("view")
@@ -288,7 +288,7 @@ tm_shape(movement, projection = 2056)+
   tm_dots(col = "transport_mode")
 ```
 
-## Speed
+## Speed calculation
 
 ```{r}
 # get the LV95 coordinates in two separate coordinates
