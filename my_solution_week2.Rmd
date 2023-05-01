@@ -235,7 +235,8 @@ ggplot(data = caro) +
        y = "Speed [m/s]")+
   scale_color_manual(name = "Speed",labels = c("Regular speed", "Rolling window (k = 3)",
                                                "Rolling window (k = 5)", "Rolling window (k = 7)"),
-                     values=c("#C77CFF", "#7CAE00", "#00BFC4", "#F8766D"))
+                     values=c("#C77CFF", "#7CAE00", "#00BFC4", "#F8766D")) +
+  theme_minimal()
 ```
 
 # Task 6 - Add your movement data to your repository
